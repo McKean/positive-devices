@@ -1,0 +1,27 @@
+image: node:10
+
+pipelines:
+  default:
+  branches:
+    master:
+      - step:
+          name: test and deploy to dev
+          deployment: test
+          script:
+            - yarn
+            - cp .local.env.sample .local.env
+            - yarn run test
+            - ./node_modules/serverless/bin/serverless deploy -s dev
+      - step:
+          name: deploy to staging
+          deployment: staging
+          script:
+            - yarn
+            - ./node_modules/serverless/bin/serverless deploy -s staging
+      - step:
+          name: deploy to production
+          deployment: production
+          trigger: manual
+          script:
+            - yarn
+            - ./node_modules/serverless/bin/serverless deploy -s production

@@ -1,0 +1,53 @@
+service:
+  name: positive-devices
+
+plugins:
+  - serverless-domain-manager
+  - serverless-webpack
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ${opt:region, 'eu-west-1'}
+  stage: ${opt:stage, 'dev'}
+  endpointType: REGIONAL
+  deploymentBucket:
+    name: "serverless"
+
+
+custom:
+  webpack:
+    includeModules:
+      forceInclude:
+        - read-chunk
+    packager: 'yarn'
+  serverless-offline:
+    port: 3003
+  subdomain:
+    dev: 'dev.'
+    staging: 'staging.'
+    production: ''
+  customDomain:
+    domainName: "api.${self:custom.subdomain.${opt:stage, 'dev.'}}positive-devices.com"
+    basePath: "v1"
+    stage: ${opt:stage, self:provider.stage}
+    createRoute53Record: true
+
+
+functions:
+  add:
+    handler: src/index.handler
+    timeout: 900 
+    memorySize: 256
+    reservedConcurrency: 20
+    events:
+      - http:
+          cors: true
+          path: add
+          method: put
+          request:
+            parameters:
+              querystrings:
+                ida: true
+                idb: true
