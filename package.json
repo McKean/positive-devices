@@ -1,6 +1,6 @@
 {
   "name": "positive-devices",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Keeping track of positive relationships between devices",
   "license": "Apache-2.0",
   "repository": {
