@@ -1,0 +1,88 @@
+{
+  "name": "positive-devices",
+  "version": "0.0.1",
+  "description": "Keeping track of positive relationships between devices",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git"
+  },
+  "scripts": {
+    "start": "env-cmd .local.env sls offline",
+    "ci-test": "env-cmd .local.env.sample sls offline --exec 'jest --testPathPattern=__tests__ --silent'",
+    "build": "tsc --noEmit",
+    "test": "env-cmd .local.env jest --testPathPattern=__tests__ --silent",
+    "devtest": "env-cmd .local.env jest",
+    "lint": "prettier-tslint check \"{src,tests}/**/*.ts\"",
+    "lint:fix": "prettier-tslint fix \"{src,tests}/**/*.ts\"",
+    "test:coverage": "jest --coverage --testPathPattern=__tests__ --silent",
+    "test:watch": "jest --watch --testPathPattern=__tests__"
+  },
+  "prettier": {
+    "parser": "typescript",
+    "singleQuote": true
+  },
+  "jest-junit": {
+    "outputDirectory": "./test-reports"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "^.+\\.ts?$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsConfig": "<rootDir>/tsconfig.json"
+      }
+    },
+    "testRegex": "(/__tests__/.*)\\.(ts?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "json",
+      "js"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/.webpack/",
+      "<rootDir>/compiled/"
+    ],
+    "reporters": [
+      "default",
+      "jest-junit"
+    ]
+  },
+  "devDependencies": {
+    "@serverless/event-mocks": "^1.1.1",
+    "@types/jest": "^23.3.9",
+    "aws-sdk": "^2.363.0",
+    "aws-sdk-mock": "^5.0.0",
+    "concurrently": "^5.1.0",
+    "copy-webpack-plugin": "^4.6.0",
+    "coveralls": "^3.0.2",
+    "env-cmd": "^8.0.2",
+    "http-server": "^0.12.1",
+    "jest": "^23.6.0",
+    "jest-junit": "^6.2.1",
+    "prettier": "^1.15.2",
+    "prettier-tslint": "^0.4.0",
+    "serverless": "^1.59.3",
+    "serverless-domain-manager": "^3.3.1",
+    "serverless-offline": "^5.12.1",
+    "serverless-offline-sns": "^0.68.0",
+    "serverless-offline-sqs": "^3.0.1",
+    "serverless-offline-ssm": "^4.1.2",
+    "serverless-s3-local": "^0.5.4",
+    "serverless-webpack": "^5.3.1",
+    "ts-jest": "^23.10.5",
+    "ts-loader": "^5.3.0",
+    "typescript": "^3.7.3",
+    "webpack": "^4.41.3",
+    "webpack-node-externals": "^1.7.2"
+  },
+  "dependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/mime": "^2.0.0",
+    "@types/node": "^13.1.4",
+    "axios": "^0.19.2",
+    "read-chunk": "^3.2.0",
+    "serverless-jest-plugin": "^0.2.1"
+  }
+}
