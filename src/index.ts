@@ -1,5 +1,5 @@
 import { DynamoDB, SQS, SNS, APIGateway } from 'aws-sdk';
-import { APIGatewayProxyEvent } from 'aws-lambda';
+import { APIGatewayProxyEvent, DynamoDBRecord } from 'aws-lambda';
 
 const dynamoDb = new DynamoDB.DocumentClient({
   region: 'localhost',
@@ -7,6 +7,7 @@ const dynamoDb = new DynamoDB.DocumentClient({
   accessKeyId: 'DEFAULT_ACCESS_KEY', // needed if you don't have aws credentials at all in env
   secretAccessKey: 'DEFAULT_SECRET' // needed if you don't have aws credentials at all in env
 });
+
 const millisecperday = 24 * 3600 * 1000;
 
 interface AddPost {
@@ -14,55 +15,143 @@ interface AddPost {
   seen: string;
 }
 
+//
+//
+// async functions for dynamo operations
+
+const batchWrite = async (params: any) => {
+  return new Promise((resolve, reject) => {
+    dynamoDb.batchWrite(params, function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      resolve(data);
+    });
+  });
+};
+
+const put = async (params: any) => {
+  return new Promise((resolve, reject) => {
+    dynamoDb.put(params, function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      resolve(data);
+    });
+  });
+};
+
+const query = async (params: any) => {
+  return new Promise((resolve, reject) => {
+    dynamoDb.query(params, function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      resolve(data);
+    });
+  });
+};
+
+//
+// endpoints
+//
+
 export const add = async (event: APIGatewayProxyEvent) => {
   const body: string = event.body || '';
   const { id, seen } = JSON.parse(body) as AddPost;
   const timestamp = new Date().getTime();
 
+  // using batch write to add two entries (reverse))
   const params = {
-    TableName: 'Entry',
-    Item: {
-      EntryType: 'Rel',
-      Id: id,
-      Seen: seen,
-      T: timestamp
+    RequestItems: {
+      Entry: [
+        {
+          PutRequest: {
+            Item: {
+              Id: `${id}:REL`,
+              Seen: seen,
+              T: timestamp
+            }
+          }
+        },
+        {
+          PutRequest: {
+            Item: {
+              Id: `${seen}:REL`,
+              Seen: id,
+              T: timestamp
+            }
+          }
+        }
+      ]
     }
   };
 
-  dynamoDb.put(params, (error, result) => {
-    if (error) {
-      console.error(error);
-      return;
-    }
-    console.log(result);
-    return;
-  });
-  classify_1(ida, idb);
+  try {
+    await batchWrite(params);
+  } catch (e) {
+    console.error(e);
+  }
+  // todo: respond with OK and dispatch next as job (sns/sqs)
+  // classify what's been seen (reverse)
+  await classifySeen(id, seen, timestamp);
+  await classifySeen(seen, id, timestamp);
+  return 'done!';
 };
 
-function classify_1(id1: string, id2: string) {
-  const timestamp = new Date().getTime();
+const classifySeen = async (id: string, seen: string, timestamp: number) => {
   const params = {
     TableName: 'Entry',
-    KeyConditionExpression:
-      '(NOT (EntryType=:rel || EntryType=:lvl3)) AND id1=:y AND Timestamp>:num',
+    KeyConditionExpression: 'Id=:seen AND Timestamp>:num',
     ExpressionAttributeValues: {
-      ':rel': 'rel',
-      ':lvl3': 'l-3',
-      ':y': id1,
+      ':seen': seen,
       ':num': timestamp - 20 * millisecperday
-    }
+    },
+    AttributesToGet: ['Level', 'Id'],
+    ScanIndexForward: true,
+    Limit: 1, // should eventually be adjusted
+    Select: 'SPECIFIC_ATTRIBUTES'
   };
-  dynamoDb.query(params, function(err, data) {
-    //if (err) console.log(err);
-    //else console.log(data);
-    return;
-  });
-}
+  // todo: limit 1 and just getting the most recent might not be valid
+  // perhaps getting the highest level would be the proper thing to do
+  const data: any = await query(params);
+
+  // once getting results use the level and increase by one -> store
+  if (data.Items) {
+    const level: number = data.Items[0].Level;
+    await classify(id, level + 1, timestamp);
+    // now here we would need to check the other relationships
+    /*
+
+    ID       T     seen level
+    | A:REL | -1 | C | <- no need to report on this
+    | B     | 0  | 0 | <- positive
+    | A:REL | 1  | B |
+    | A     | 1  | 1 | 
+    | C     | 1  | 2 | (would be incorrect)
+
+    I guess I answered my own question, it's simple when just adding relationships...
+    it will be tricky when adding report
+     */
+  }
+  return;
+};
+
 export const report = async (event: any) => {
   const { id } = event.queryStringParameters;
+  const timestamp = new Date().getTime();
 
-  const body = '';
+  await classify(id, 0, timestamp);
+  // so here we can do classifySeen again but shifted (pretending now is 20 days ago)
+  // we need to basically invert the classifySeen
+  //
+  // so A is positive
+  // in the pat B has seen A
+  // and C has seen A
+  //
+  // so we can just run classifySeen and report on seen vs id
+
+  const body = { result: 'OK' };
 
   return {
     statusCode: 200,
@@ -91,18 +180,19 @@ export const check = async (event: any) => {
   };
 };
 
-export const classify = async (event: any) => {
-  const { ida, idb } = event.queryStringParameters;
-
-  const body = '';
-
-  return {
-    statusCode: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Credentials': true,
-      'Content-Type': 'application/json'
-    },
-    body
+export const classify = async (
+  id: string,
+  level: number,
+  timestamp: number
+) => {
+  const params = {
+    TableName: 'Table',
+    Item: {
+      Id: id,
+      Level: level,
+      T: timestamp
+    }
   };
+
+  return await put(params);
 };
