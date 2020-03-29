@@ -6,6 +6,7 @@ plugins:
   - serverless-webpack
   - serverless-offline
   - serverless-dynamodb-local
+  - webpack-node-externals
 
 provider:
   name: aws
@@ -34,12 +35,15 @@ custom:
     basePath: "v1"
     stage: ${opt:stage, self:provider.stage}
     createRoute53Record: true
+  dynamodb:
+    stages:
+      - ${self:provider.stage}
 
 
 functions:
   add:
-    handler: src/index.handler
-    timeout: 900 
+    handler: src/index.add
+    timeout: 900
     memorySize: 256
     reservedConcurrency: 20
     events:
@@ -52,3 +56,41 @@ functions:
               querystrings:
                 ida: true
                 idb: true
+
+
+resources:
+  Resources:
+    DynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: EntryType
+            AttributeType: S
+          -
+            AttributeName: Id1
+            AttributeType: S
+          -
+            AttributeName: Id2
+            AttributeType: S
+          -
+            AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          -
+            AttributeName: EntryType
+            KeyType: HASH
+          -
+            AttributeName: Id1
+            KeyType: HASH
+          -
+            AttributeName: Id2
+            KeyType: HASH
+          -
+            AttributeName: Timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 10
+          WriteCapacityUnits: 10
+        TableName: Entry
