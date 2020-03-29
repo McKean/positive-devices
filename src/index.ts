@@ -117,7 +117,7 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
   const data: any = await query(params);
 
   // once getting results use the level and increase by one -> store
-  if (data.Items) {
+  if (data.Items.length) {
     const level: number = data.Items[0].Level;
     await classify(id, level + 1, timestamp);
     // now here we would need to check the other relationships
