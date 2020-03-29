@@ -3,9 +3,9 @@ service:
 
 plugins:
   - serverless-domain-manager
+  - serverless-dynamodb-local
   - serverless-webpack
   - serverless-offline
-  - serverless-dynamodb-local
   - webpack-node-externals
 
 provider:
@@ -38,6 +38,14 @@ custom:
   dynamodb:
     stages:
       - ${self:provider.stage}
+    start:
+          port: 8000
+          inMemory: true
+          heapInitial: 200m
+          heapMax: 1g
+          migrate: true
+          seed: true
+          convertEmptyValues: true
 
 
 functions:
@@ -50,7 +58,7 @@ functions:
       - http:
           cors: true
           path: add
-          method: put
+          method: post
           request:
             parameters:
               querystrings:

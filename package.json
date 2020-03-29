@@ -7,7 +7,7 @@
     "type": "git"
   },
   "scripts": {
-    "start": "env-cmd .local.env sls offline",
+    "start": "env-cmd .local.env sls offline start",
     "ci-test": "env-cmd .local.env.sample sls offline --exec 'jest --testPathPattern=__tests__ --silent'",
     "build": "tsc --noEmit",
     "test": "env-cmd .local.env jest --testPathPattern=__tests__ --silent",
