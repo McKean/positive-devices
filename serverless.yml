@@ -73,30 +73,14 @@ resources:
       DeletionPolicy: Retain
       Properties:
         AttributeDefinitions:
-          -
-            AttributeName: EntryType
+          - AttributeName: Id
             AttributeType: S
-          -
-            AttributeName: Id1
-            AttributeType: S
-          -
-            AttributeName: Id2
-            AttributeType: S
-          -
-            AttributeName: timestamp
+          - AttributeName: T
             AttributeType: N
         KeySchema:
-          -
-            AttributeName: EntryType
+          - AttributeName: Id
             KeyType: HASH
-          -
-            AttributeName: Id1
-            KeyType: HASH
-          -
-            AttributeName: Id2
-            KeyType: HASH
-          -
-            AttributeName: Timestamp
+          - AttributeName: T
             KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 10
