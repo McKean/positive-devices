@@ -16,7 +16,7 @@ describe('check', () => {
 
   it('should provide result for check', async () => {
     const event = createEvent('aws:apiGateway', {
-      queryStringParameters: { id: 'hello' },
+      queryStringParameters: { id: 'world' },
       httpMethod: 'GET',
       // @ts-ignore because createEvent will fill the blanks
       requestContext: {
@@ -24,8 +24,11 @@ describe('check', () => {
       }
     });
     return wrapped.run(event).then((response: any) => {
-      const data = JSON.parse(response.data);
+      console.log(response);
+      const body = JSON.parse(response.body);
       expect(response.statusCode).toBe(200);
+      expect(body[0].T).toBeLessThan(new Date().getTime());
+      expect(body[0].L).toBeLessThan(4);
     });
   });
 });

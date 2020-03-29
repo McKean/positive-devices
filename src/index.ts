@@ -8,7 +8,9 @@ const dynamoDb = new DynamoDB.DocumentClient({
   secretAccessKey: 'DEFAULT_SECRET' // needed if you don't have aws credentials at all in env
 });
 
-const millisecperday = 24 * 3600 * 1000;
+const millisecperday: number = 24 * 3600 * 1000;
+// days level check should go back to report on devices seen
+const REPORT_DAYS: number = 14;
 
 interface AddPost {
   id: string;
@@ -16,8 +18,8 @@ interface AddPost {
 }
 
 //
-//
 // async functions for dynamo operations
+//
 
 const batchWrite = async (params: any) => {
   return new Promise((resolve, reject) => {
@@ -60,6 +62,17 @@ export const add = async (event: APIGatewayProxyEvent) => {
   const body: string = event.body || '';
   const { id, seen } = JSON.parse(body) as AddPost;
   const timestamp = new Date().getTime();
+
+  if (!id || !seen) {
+    return {
+      statusCode: 400,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+        'Content-Type': 'application/json'
+      }
+    };
+  }
 
   // using batch write to add two entries (reverse))
   const params = {
@@ -109,13 +122,13 @@ export const add = async (event: APIGatewayProxyEvent) => {
 const classifySeen = async (id: string, seen: string, timestamp: number) => {
   const params = {
     TableName: 'Entry',
-    // AttributesToGet: ['Level', 'Id'],
+    // AttributesToGet: ['L', 'Id'],
     KeyConditionExpression: 'Id=:seen AND T>:num',
     ExpressionAttributeValues: {
       ':seen': seen,
-      ':num': timestamp - 20 * millisecperday
+      ':num': timestamp - REPORT_DAYS * millisecperday
     },
-    ScanIndexForward: true,
+    ScanIndexForward: false,
     Limit: 1 // should eventually be adjusted
     // Select: 'SPECIFIC_ATTRIBUTES'
   };
@@ -126,7 +139,7 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
   // once getting results use the level and increase by one -> store
 
   if (data.Items.length) {
-    const level: number = data.Items[0].Level;
+    const level: number = data.Items[0].L;
     await classify(id, level + 1, timestamp);
     // now here we would need to check the other relationships
     /*
@@ -145,7 +158,7 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
   return;
 };
 
-const listRelationship = async (id: string, timestamp: number ) => {
+const listRelationship = async (id: string, timestamp: number) => {
   const params = {
     TableName: 'Entry',
     KeyConditionExpression: 'Id=:seen AND T>:num',
@@ -167,53 +180,66 @@ export const report = async (event: any) => {
   const timestamp = new Date().getTime();
 
   await classify(id, 0, timestamp);
-  var data: any = await listRelationship(id, timestamp - 20 * millisecperday);
+  var data: any = await listRelationship(
+    id,
+    timestamp - REPORT_DAYS * millisecperday
+  );
   //level 1
-  var newEntry=[]
+  var newEntry = [];
 
   if (data.Items) {
-
-     var len = data.Items.length
-     console.log(data.Items[0])
-     for (var i=0; i<0 ; i++) {
-        await classify(data.Items[i].Seen, 1, timestamp);
-        var entry: any = await listRelationship(data.Items[i].Seen, data.Items[i].T);
-        newEntry.push(entry)
-     }
+    var len = data.Items.length;
+    for (var i = 0; i < 0; i++) {
+      await classify(data.Items[i].Seen, 1, timestamp);
+      var entry: any = await listRelationship(
+        data.Items[i].Seen,
+        data.Items[i].T
+      );
+      newEntry.push(entry);
+    }
   }
   //level 2
-  var newEntry2=[]
+  var newEntry2 = [];
 
-  for(var i=0; i < newEntry.length ; i++){
+  for (var i = 0; i < newEntry.length; i++) {
+    var data: any = await listRelationship(
+      newEntry[i].seen,
+      timestamp - REPORT_DAYS * millisecperday
+    );
+    if (data.Items) {
+      len = data.Items.length;
 
-      var data: any = await listRelationship(newEntry[i].seen, timestamp - 20 * millisecperday);
-      if(data.Items){
-        len = data.Items.length
-
-        for (var i=0; i<len ; i++) {
-           await classify(data.Items[i].seen, 2, timestamp);
-           var entry: any = await listRelationship(data.Items[i].seen, data.Items[i].timestamp);
-           newEntry2.push(entry)
-        }
+      for (var i = 0; i < len; i++) {
+        await classify(data.Items[i].seen, 2, timestamp);
+        var entry: any = await listRelationship(
+          data.Items[i].seen,
+          data.Items[i].timestamp
+        );
+        newEntry2.push(entry);
       }
+    }
   }
   //level 3
-  var newEntry3=[]
+  var newEntry3 = [];
 
-  for(var i=0; i < newEntry2.length ; i++){
+  for (var i = 0; i < newEntry2.length; i++) {
+    var data: any = await listRelationship(
+      newEntry2[i].seen,
+      timestamp - REPORT_DAYS * millisecperday
+    );
 
-      var data: any = await listRelationship(newEntry2[i].seen, timestamp - 20 * millisecperday);
-
-      if(data.Items){
-        len = data.Items.length
-        for (var i=0; i<len ; i++) {
-           await classify(data.Items[i].seen, 3, timestamp);
-           var entry: any = await listRelationship(data.Items[i].seen, data.Items[i].timestamp);
-           newEntry3.push(entry)
-        }
+    if (data.Items) {
+      len = data.Items.length;
+      for (var i = 0; i < len; i++) {
+        await classify(data.Items[i].seen, 3, timestamp);
+        var entry: any = await listRelationship(
+          data.Items[i].seen,
+          data.Items[i].timestamp
+        );
+        newEntry3.push(entry);
       }
+    }
   }
-
 
   return {
     statusCode: 200,
@@ -234,14 +260,14 @@ export const check = async (event: any) => {
     KeyConditionExpression: 'Id=:id AND T>:num',
     ExpressionAttributeValues: {
       ':id': `${id}`,
-      ':num': timestamp - 20 * millisecperday
+      ':num': timestamp - REPORT_DAYS * millisecperday
     },
-    ScanIndexForward: true
+    ProjectionExpression: ['T', 'L'],
+    ScanIndexForward: false
   };
 
-  const result = await query(params);
-  console.log(result);
-  const body = '';
+  const result: any = await query(params);
+  const body = result.Items;
 
   return {
     statusCode: 200,
@@ -250,7 +276,7 @@ export const check = async (event: any) => {
       'Access-Control-Allow-Credentials': true,
       'Content-Type': 'application/json'
     },
-    body
+    body: JSON.stringify(body)
   };
 };
 
@@ -263,10 +289,13 @@ export const classify = async (
     TableName: 'Entry',
     Item: {
       Id: id,
-      Level: level,
+      L: level,
       T: timestamp
     }
   };
-
-  return await put(params);
+  // making sure not more than 3 levels are recorded
+  if (level < 4) {
+    return await put(params);
+  }
+  return;
 };
