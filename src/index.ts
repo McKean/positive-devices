@@ -124,6 +124,7 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
   const data: any = await query(params);
 
   // once getting results use the level and increase by one -> store
+
   if (data.Items.length) {
     const level: number = data.Items[0].Level;
     await classify(id, level + 1, timestamp);
@@ -144,15 +145,15 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
   return;
 };
 
-const listRelationship = async (id: string, timestamp: number) => {
+const listRelationship = async (id: string, timestamp: number ) => {
   const params = {
     TableName: 'Entry',
     KeyConditionExpression: 'Id=:seen AND T>:num',
     ExpressionAttributeValues: {
       ':seen': `${id}:REL`,
-      ':num': timestamp - 20 * millisecperday
+      ':num': timestamp
     },
-    // AttributesToGet: ['Id', 'timestamp'],
+    //AttributesToGet: ['Seen', 'T'],
     ScanIndexForward: true
     // Select: 'SPECIFIC_ATTRIBUTES'
   };
@@ -166,13 +167,53 @@ export const report = async (event: any) => {
   const timestamp = new Date().getTime();
 
   await classify(id, 0, timestamp);
+  var data: any = await listRelationship(id, timestamp - 20 * millisecperday);
+  //level 1
+  var newEntry=[]
 
-  const data: any = await listRelationship(id, timestamp);
   if (data.Items) {
-    for (let idSeen in data.Items) {
-      await classify(idSeen, 1, timestamp);
-    }
+
+     var len = data.Items.length
+     console.log(data.Items[0])
+     for (var i=0; i<0 ; i++) {
+        await classify(data.Items[i].Seen, 1, timestamp);
+        var entry: any = await listRelationship(data.Items[i].Seen, data.Items[i].T);
+        newEntry.push(entry)
+     }
   }
+  //level 2
+  var newEntry2=[]
+
+  for(var i=0; i < newEntry.length ; i++){
+
+      var data: any = await listRelationship(newEntry[i].seen, timestamp - 20 * millisecperday);
+      if(data.Items){
+        len = data.Items.length
+
+        for (var i=0; i<len ; i++) {
+           await classify(data.Items[i].seen, 2, timestamp);
+           var entry: any = await listRelationship(data.Items[i].seen, data.Items[i].timestamp);
+           newEntry2.push(entry)
+        }
+      }
+  }
+  //level 3
+  var newEntry3=[]
+
+  for(var i=0; i < newEntry2.length ; i++){
+
+      var data: any = await listRelationship(newEntry2[i].seen, timestamp - 20 * millisecperday);
+
+      if(data.Items){
+        len = data.Items.length
+        for (var i=0; i<len ; i++) {
+           await classify(data.Items[i].seen, 3, timestamp);
+           var entry: any = await listRelationship(data.Items[i].seen, data.Items[i].timestamp);
+           newEntry3.push(entry)
+        }
+      }
+  }
+
 
   return {
     statusCode: 200,
