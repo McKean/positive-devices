@@ -180,7 +180,10 @@ export const report = async (event: any) => {
   const timestamp = new Date().getTime();
 
   await classify(id, 0, timestamp);
-  var data: any = await listRelationship(id, timestamp - 20 * millisecperday);
+  var data: any = await listRelationship(
+    id,
+    timestamp - REPORT_DAYS * millisecperday
+  );
   //level 1
   let newEntry: any[] = [];
 
