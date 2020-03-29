@@ -6,13 +6,23 @@ jest.setTimeout(500000);
 
 const lambdaWrapper = jestPlugin.lambdaWrapper;
 const wrapped = lambdaWrapper.wrap(mod, {
-  handler: 'handler'
+  handler: 'report'
 });
 
-describe('add', () => {
+describe('report', () => {
   beforeEach(() => {});
 
+  // @ts-ignore because createEvent will fill the blanks
+
   it('should be able to provide relationship data', async () => {
+    const event = createEvent('aws:apiGateway', {
+      body: '{ "id": "hello" }',
+      httpMethod: 'POST',
+      // @ts-ignore because createEvent will fill the blanks
+      requestContext: {
+        httpMethod: 'POST'
+      }
+    });
     return wrapped.run(event).then((response: any) => {
       expect(response.statusCode).toBe(200);
     });

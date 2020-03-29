@@ -102,15 +102,15 @@ export const add = async (event: APIGatewayProxyEvent) => {
 const classifySeen = async (id: string, seen: string, timestamp: number) => {
   const params = {
     TableName: 'Entry',
-    KeyConditionExpression: 'Id=:seen AND Timestamp>:num',
+    // AttributesToGet: ['Level', 'Id'],
+    KeyConditionExpression: 'Id=:seen AND T>:num',
     ExpressionAttributeValues: {
       ':seen': seen,
       ':num': timestamp - 20 * millisecperday
     },
-    AttributesToGet: ['Level', 'Id'],
     ScanIndexForward: true,
-    Limit: 1, // should eventually be adjusted
-    Select: 'SPECIFIC_ATTRIBUTES'
+    Limit: 1 // should eventually be adjusted
+    // Select: 'SPECIFIC_ATTRIBUTES'
   };
   // todo: limit 1 and just getting the most recent might not be valid
   // perhaps getting the highest level would be the proper thing to do
@@ -138,7 +138,6 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
 };
 
 const listRelationship = async (id: string, timestamp: number) => {
-
   const params = {
     TableName: 'Entry',
     KeyConditionExpression: 'Id=:seen AND Timestamp>:num',
@@ -154,18 +153,18 @@ const listRelationship = async (id: string, timestamp: number) => {
   return await query(params);
 };
 export const report = async (event: any) => {
-  const { id } = event.queryStringParameters;
+  const body: string = event.body || '';
+  const { id } = JSON.parse(body);
   const timestamp = new Date().getTime();
 
-  const data: any = await listRelationship(id,timestamp);
+  const data: any = await listRelationship(id, timestamp);
   if (data.Items) {
-     for(let idSeen in data.Items){
-        await classify(idSeen,1,timestamp)
-     }
+    for (let idSeen in data.Items) {
+      await classify(idSeen, 1, timestamp);
+    }
   }
 
-
-  const body = { result: 'OK' };
+  const response = { result: 'OK' };
 
   return {
     statusCode: 200,
@@ -174,7 +173,7 @@ export const report = async (event: any) => {
       'Access-Control-Allow-Credentials': true,
       'Content-Type': 'application/json'
     },
-    body
+    response
   };
 };
 
