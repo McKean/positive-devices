@@ -180,64 +180,40 @@ export const report = async (event: any) => {
   const timestamp = new Date().getTime();
 
   await classify(id, 0, timestamp);
-  var data: any = await listRelationship(
-    id,
-    timestamp - REPORT_DAYS * millisecperday
-  );
+  var data: any = await listRelationship(id, timestamp - 20 * millisecperday);
   //level 1
-  var newEntry = [];
+  let newEntry: any[] = [];
 
   if (data.Items) {
     var len = data.Items.length;
-    for (var i = 0; i < 0; i++) {
+    for (var i = 0; i < len; i++) {
       await classify(data.Items[i].Seen, 1, timestamp);
       var entry: any = await listRelationship(
         data.Items[i].Seen,
         data.Items[i].T
       );
-      newEntry.push(entry);
+      newEntry = newEntry.concat(entry);
     }
   }
   //level 2
-  var newEntry2 = [];
+  let newEntry2: any[] = [];
 
   for (var i = 0; i < newEntry.length; i++) {
-    var data: any = await listRelationship(
-      newEntry[i].seen,
-      timestamp - REPORT_DAYS * millisecperday
-    );
-    if (data.Items) {
-      len = data.Items.length;
-
-      for (var i = 0; i < len; i++) {
-        await classify(data.Items[i].seen, 2, timestamp);
-        var entry: any = await listRelationship(
-          data.Items[i].seen,
-          data.Items[i].timestamp
-        );
-        newEntry2.push(entry);
-      }
+    len = newEntry[i].Items.length;
+    for (var j = 0; j < len; j++) {
+      await classify(newEntry[i].Items[j].Seen, 2, timestamp);
+      var entry: any = await listRelationship(
+        newEntry[i].Items[j].Seen,
+        newEntry[i].Items[j].T
+      );
+      newEntry2 = newEntry2.concat(entry);
     }
   }
-  //level 3
-  var newEntry3 = [];
 
   for (var i = 0; i < newEntry2.length; i++) {
-    var data: any = await listRelationship(
-      newEntry2[i].seen,
-      timestamp - REPORT_DAYS * millisecperday
-    );
-
-    if (data.Items) {
-      len = data.Items.length;
-      for (var i = 0; i < len; i++) {
-        await classify(data.Items[i].seen, 3, timestamp);
-        var entry: any = await listRelationship(
-          data.Items[i].seen,
-          data.Items[i].timestamp
-        );
-        newEntry3.push(entry);
-      }
+    len = newEntry2[i].Items.length;
+    for (var j = 0; j < len; j++) {
+      await classify(newEntry2[i].Items[j].Seen, 3, timestamp);
     }
   }
 
@@ -257,10 +233,15 @@ export const check = async (event: any) => {
 
   const params = {
     TableName: 'Entry',
-    KeyConditionExpression: 'Id=:id AND T>:num',
+    FilterExpression: '#L>:lvl',
+    KeyConditionExpression: 'Id=:id AND T>:num ',
+    ExpressionAttributeNames: {
+      '#L': 'L'
+    },
     ExpressionAttributeValues: {
       ':id': `${id}`,
-      ':num': timestamp - REPORT_DAYS * millisecperday
+      ':num': timestamp - REPORT_DAYS * millisecperday,
+      ':lvl': 0
     },
     ProjectionExpression: ['T', 'L'],
     ScanIndexForward: false
@@ -286,6 +267,7 @@ export const classify = async (
   timestamp: number
 ) => {
   const params = {
+    KeyConditionExpression: 'Id=:id AND >:num',
     TableName: 'Entry',
     Item: {
       Id: id,
