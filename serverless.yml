@@ -16,8 +16,6 @@ provider:
   endpointType: REGIONAL
   deploymentBucket:
     name: "serverless"
-
-
 custom:
   webpack:
     includeModules:
@@ -60,12 +58,35 @@ functions:
           path: add
           method: post
           request:
+            schema:
+              application/json: ${file(schema/add_request.json)}
+  report:
+    handler: src/index.report
+    timeout: 900
+    memorySize: 256
+    reservedConcurrency: 20
+    events:
+      - http:
+          cors: true
+          path: report
+          method: post
+          request:
+            schema:
+              application/json: ${file(schema/report_request.json)}
+  check:
+    handler: src/index.check
+    timeout: 900
+    memorySize: 256
+    reservedConcurrency: 20
+    events:
+      - http:
+          cors: true
+          path: check
+          method: get
+          request:
             parameters:
               querystrings:
-                ida: true
-                idb: true
-
-
+                id: true
 resources:
   Resources:
     DynamoDbTable:

@@ -1,0 +1,21 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Add Schema",
+  "required": ["id", "seen"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "title": "id of origin device",
+      "default": "",
+      "pattern": "^[a-zA-Z0-9]+$"
+    },
+    "seen": {
+      "type": "string",
+      "title": "id of seen device",
+      "default": "",
+      "pattern": "^[a-zA-Z0-9]+$"
+    }
+  }
+}

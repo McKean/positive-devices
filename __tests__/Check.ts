@@ -24,6 +24,7 @@ describe('check', () => {
       }
     });
     return wrapped.run(event).then((response: any) => {
+      const data = JSON.parse(response.data);
       expect(response.statusCode).toBe(200);
     });
   });

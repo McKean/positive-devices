@@ -1,0 +1,15 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "title": "Check Schema",
+  "required": ["id"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "title": "id of device to check",
+      "default": "",
+      "pattern": "^[a-zA-Z0-9]+$"
+    }
+  }
+}
