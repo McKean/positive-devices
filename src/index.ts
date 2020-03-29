@@ -165,6 +165,8 @@ export const report = async (event: any) => {
   const { id } = JSON.parse(body);
   const timestamp = new Date().getTime();
 
+  await classify(id, 0, timestamp);
+
   const data: any = await listRelationship(id, timestamp);
   if (data.Items) {
     for (let idSeen in data.Items) {
