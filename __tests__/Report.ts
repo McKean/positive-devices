@@ -14,7 +14,7 @@ describe('report', () => {
 
   // @ts-ignore because createEvent will fill the blanks
 
-  it('should be able to provide relationship data', async () => {
+  it('should be able to report positive', async () => {
     const event = createEvent('aws:apiGateway', {
       body: '{ "id": "hello" }',
       httpMethod: 'POST',

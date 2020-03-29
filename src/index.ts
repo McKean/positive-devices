@@ -96,7 +96,14 @@ export const add = async (event: APIGatewayProxyEvent) => {
   // classify what's been seen (reverse)
   await classifySeen(id, seen, timestamp);
   await classifySeen(seen, id, timestamp);
-  return 'done!';
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': true,
+      'Content-Type': 'application/json'
+    }
+  };
 };
 
 const classifySeen = async (id: string, seen: string, timestamp: number) => {
@@ -140,18 +147,19 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
 const listRelationship = async (id: string, timestamp: number) => {
   const params = {
     TableName: 'Entry',
-    KeyConditionExpression: 'Id=:seen AND Timestamp>:num',
+    KeyConditionExpression: 'Id=:seen AND T>:num',
     ExpressionAttributeValues: {
       ':seen': `${id}:REL`,
       ':num': timestamp - 20 * millisecperday
     },
-    AttributesToGet: ['Id', 'timestamp'],
-    ScanIndexForward: true,
-    Select: 'SPECIFIC_ATTRIBUTES'
+    // AttributesToGet: ['Id', 'timestamp'],
+    ScanIndexForward: true
+    // Select: 'SPECIFIC_ATTRIBUTES'
   };
 
   return await query(params);
 };
+
 export const report = async (event: any) => {
   const body: string = event.body || '';
   const { id } = JSON.parse(body);
@@ -164,22 +172,32 @@ export const report = async (event: any) => {
     }
   }
 
-  const response = { result: 'OK' };
-
   return {
     statusCode: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Credentials': true,
       'Content-Type': 'application/json'
-    },
-    response
+    }
   };
 };
 
 export const check = async (event: any) => {
   const { id } = event.queryStringParameters;
+  const timestamp = new Date().getTime();
 
+  const params = {
+    TableName: 'Entry',
+    KeyConditionExpression: 'Id=:id AND T>:num',
+    ExpressionAttributeValues: {
+      ':id': `${id}`,
+      ':num': timestamp - 20 * millisecperday
+    },
+    ScanIndexForward: true
+  };
+
+  const result = await query(params);
+  console.log(result);
   const body = '';
 
   return {
@@ -199,7 +217,7 @@ export const classify = async (
   timestamp: number
 ) => {
   const params = {
-    TableName: 'Table',
+    TableName: 'Entry',
     Item: {
       Id: id,
       Level: level,
