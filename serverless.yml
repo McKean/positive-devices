@@ -5,6 +5,7 @@ plugins:
   - serverless-domain-manager
   - serverless-webpack
   - serverless-offline
+  - serverless-dynamodb-local
 
 provider:
   name: aws

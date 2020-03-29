@@ -65,6 +65,7 @@
     "prettier-tslint": "^0.4.0",
     "serverless": "^1.59.3",
     "serverless-domain-manager": "^3.3.1",
+    "serverless-dynamodb-local": "^0.2.39",
     "serverless-offline": "^5.12.1",
     "serverless-offline-sns": "^0.68.0",
     "serverless-offline-sqs": "^3.0.1",

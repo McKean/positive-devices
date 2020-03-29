@@ -14,3 +14,4 @@ coverage/
 test-reports/
 
 .DS_Store
+.dynamodb
