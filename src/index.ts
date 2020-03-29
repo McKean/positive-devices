@@ -52,6 +52,17 @@ const query = async (params: any) => {
   });
 };
 
+const get = async (params: any) => {
+  return new Promise((resolve, reject) => {
+    dynamoDb.get(params, function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      resolve(data);
+    });
+  });
+};
+
 //
 // endpoints
 //
@@ -102,22 +113,22 @@ export const add = async (event: APIGatewayProxyEvent) => {
 const classifySeen = async (id: string, seen: string, timestamp: number) => {
   const params = {
     TableName: 'Entry',
-    KeyConditionExpression: 'Id=:seen AND Timestamp>:num',
+    // AttributesToGet: ['Level', 'Id'],
+    KeyConditionExpression: 'Id=:seen AND T>:num',
     ExpressionAttributeValues: {
       ':seen': seen,
       ':num': timestamp - 20 * millisecperday
     },
-    AttributesToGet: ['Level', 'Id'],
     ScanIndexForward: true,
-    Limit: 1, // should eventually be adjusted
-    Select: 'SPECIFIC_ATTRIBUTES'
+    Limit: 1 // should eventually be adjusted
+    // Select: 'SPECIFIC_ATTRIBUTES'
   };
   // todo: limit 1 and just getting the most recent might not be valid
   // perhaps getting the highest level would be the proper thing to do
   const data: any = await query(params);
 
   // once getting results use the level and increase by one -> store
-  if (data.Items) {
+  if (data.Items.length) {
     const level: number = data.Items[0].Level;
     await classify(id, level + 1, timestamp);
     // now here we would need to check the other relationships
@@ -138,10 +149,12 @@ const classifySeen = async (id: string, seen: string, timestamp: number) => {
 };
 
 export const report = async (event: any) => {
-  const { id } = event.queryStringParameters;
+  const body: string = event.body || '';
+  const { id } = JSON.parse(body);
   const timestamp = new Date().getTime();
 
   await classify(id, 0, timestamp);
+
   // so here we can do classifySeen again but shifted (pretending now is 20 days ago)
   // we need to basically invert the classifySeen
   //
@@ -151,7 +164,7 @@ export const report = async (event: any) => {
   //
   // so we can just run classifySeen and report on seen vs id
 
-  const body = { result: 'OK' };
+  const response = { result: 'OK' };
 
   return {
     statusCode: 200,
@@ -160,12 +173,24 @@ export const report = async (event: any) => {
       'Access-Control-Allow-Credentials': true,
       'Content-Type': 'application/json'
     },
-    body
+    response
   };
 };
 
 export const check = async (event: any) => {
   const { id } = event.queryStringParameters;
+
+  const params = {
+    TableName: 'Entry',
+    KeyConditionExpression: 'Id=:id',
+    ExpressionAttributeValues: {
+      ':id': id
+    },
+    ScanIndexForward: true
+  };
+
+  const result = await query(params);
+  console.log(result);
 
   const body = '';
 
