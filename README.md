@@ -1,3 +1,5 @@
+Archived as no longer relevant - this was a hackathon project about contact tracing during covid
+
 # Positive Devices
 
 ## Local development
