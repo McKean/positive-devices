@@ -76,7 +76,7 @@
     "ts-jest": "^23.10.5",
     "ts-loader": "^9.4.2",
     "typescript": "^3.8.3",
-    "webpack": "^5.75.0",
+    "webpack": "^5.76.0",
     "webpack-node-externals": "^1.7.2"
   },
   "dependencies": {
