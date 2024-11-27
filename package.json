@@ -83,7 +83,7 @@
     "@types/axios": "^0.14.0",
     "@types/mime": "^2.0.0",
     "@types/node": "^13.1.4",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "read-chunk": "^3.2.0",
     "serverless-jest-plugin": "^0.4.0"
   }
